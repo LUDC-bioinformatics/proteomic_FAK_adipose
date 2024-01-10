@@ -1,0 +1,37 @@
+---
+title: " Mass-spec proteomics analysis: Focal adhesion kinase (FAK) in adipose cells"
+author:
+  name: "Dmytro Kryvokhyzha"
+email: dmytro.kryvokhyzha@med.lu.se
+affiliation: LUDC Bioinformatics Unit
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+  toc: true
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, eval=TRUE)
+knitr::opts_knit$set(root.dir = '~/Projects/Karin_Stenkula/')
+```
+
+## Dependencies
+
+```{r, message=FALSE, eval=TRUE}
+library(readxl)
+library(DEP)
+```
+
+## Data
+
+Load the data from the Excel file:
+
+```{r}
+d <- read_excel("data/Karin_Stenkula_IP_202312_LH_filtered.xlsx")
+```
+
+Check the structure of the data:
+
+```{r}
+str(d)
+```
