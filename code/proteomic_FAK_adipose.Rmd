@@ -12,7 +12,7 @@ output:
   
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, eval=TRUE)
-knitr::opts_knit$set(root.dir = '~/Projects/Karin_Stenkula/')
+knitr::opts_knit$set(root.dir = '~/Projects/Karin_Stenkula/proteomic_FAK_adipose/')
 ```
 
 ## Dependencies
@@ -20,9 +20,12 @@ knitr::opts_knit$set(root.dir = '~/Projects/Karin_Stenkula/')
 ```{r, message=FALSE, eval=TRUE}
 library(readxl)
 library(DEP)
+library(dplyr)
 ```
 
 ## Data
+
+### Load
 
 Load the data from the Excel file:
 
@@ -30,8 +33,289 @@ Load the data from the Excel file:
 d <- read_excel("data/Karin_Stenkula_IP_202312_LH_filtered.xlsx")
 ```
 
+```{r, eval=F, echo=F}
+# TEST
+
+# The test data is provided with the package
+data <- UbiLength
+# We filter for contaminant proteins and decoy database hits, which are indicated by "+" in the columns "Potential.contaminants" and "Reverse", respectively. 
+data <- filter(data, Reverse != "+", Potential.contaminant != "+")
+```
+
+### Process
+
 Check the structure of the data:
 
 ```{r}
-str(d)
+str(data)
+```
+
+Are there any duplicated gene names?
+
+```{r}
+data$Gene.names %>% duplicated() %>% any()
+```
+
+Make a table of duplicated gene names
+
+```{r}
+data %>% group_by(Gene.names) %>% summarize(frequency = n()) %>% 
+  arrange(desc(frequency)) %>% filter(frequency > 1)
+```
+
+Make unique names using the annotation in the "Gene.names" column as primary names and the annotation in "Protein.IDs" as name for those that do not have an gene name.
+
+```{r}
+data_unique <- make_unique(data, "Gene.names", "Protein.IDs", delim = ";")
+```
+
+Are there any duplicated names?
+
+```{r}
+data$name %>% duplicated() %>% any()
+```
+
+## Experimental design
+
+Display experimental design
+
+```{r}
+knitr::kable(UbiLength_ExpDesign)
+```
+
+Generate a SummarizedExperiment object:
+
+```{r}
+# using an experimental design
+LFQ_columns <- grep("LFQ.", colnames(data_unique)) # get LFQ column numbers
+experimental_design <- UbiLength_ExpDesign
+data_se <- make_se(data_unique, LFQ_columns, experimental_design)
+
+# by parsing condition information from the column names
+LFQ_columns <- grep("LFQ.", colnames(data_unique)) # get LFQ column numbers
+data_se_parsed <- make_se_parse(data_unique, LFQ_columns)
+
+# are they identical?
+identical(data_se_parsed, data_se_parsed)
+
+# Let's have a look at the SummarizedExperiment object
+data_se
+```
+
+## Filter
+
+Plot a barplot of the protein identification overlap between samples
+
+```{r, fig.width = 4, fig.height = 4}
+plot_frequency(data_se)
+```
+
+Filter for proteins that are identified in all replicates of at least one condition
+
+```{r}
+data_filt <- filter_missval(data_se, thr = 0)
+# Less stringent filtering:
+# Filter for proteins that are identified in 2 out of 3 replicates of at least one condition
+data_filt2 <- filter_missval(data_se, thr = 1)
+```
+
+Plot a barplot of the number of identified proteins per samples
+
+```{r, fig.width = 4, fig.height = 4}
+plot_numbers(data_filt)
+```
+
+Plot a barplot of the protein identification overlap between samples
+
+```{r, fig.width = 4, fig.height = 4}
+plot_coverage(data_filt)
+```
+
+## Normalize
+
+Normalize the data
+
+```{r}
+data_norm <- normalize_vsn(data_filt)
+```
+
+Verify the fit:
+
+```{r, fig.width = 5, fig.height = 4}
+meanSdPlot(data_norm)
+```
+
+Visualize normalization by boxplots for all samples before and after normalization
+
+```{r, fig.width = 4, fig.height = 5}
+plot_normalization(data_filt, data_norm)
+```
+
+## Impute data for missing values
+
+Plot a heatmap of proteins with missing values
+
+```{r, fig.height = 6, fig.width = 5}
+plot_missval(data_filt)
+```
+
+Plot intensity distributions and cumulative fraction of proteins with and without missing values
+
+```{r, plot_detect, fig.height = 4, fig.width = 4}
+plot_detect(data_filt)
+```
+
+Impute:
+
+```{r, impute, results = "hide", message = FALSE, warning = FALSE, error = TRUE}
+# All possible imputation methods are printed in an error, if an invalid function name is given.
+impute(data_norm, fun = "")
+
+# Impute missing data using random draws from a Gaussian distribution centered around a minimal value (for MNAR)
+data_imp <- impute(data_norm, fun = "MinProb", q = 0.01)
+
+# Impute missing data using random draws from a manually defined left-shifted Gaussian distribution (for MNAR)
+data_imp_man <- impute(data_norm, fun = "man", shift = 1.8, scale = 0.3)
+
+# Impute missing data using the k-nearest neighbour approach (for MAR)
+data_imp_knn <- impute(data_norm, fun = "knn", rowmax = 0.9)
+```
+
+Plot intensity distributions before and after imputation
+
+```{r, plot_imp, fig.width = 4, fig.height = 4}
+plot_imputation(data_norm, data_imp)
+plot_imputation(data_norm, data_imp_man)
+plot_imputation(data_norm, data_imp_knn)
+```
+
+## Differential enrichment analysis
+
+Based on linear models and empherical Bayes statistics
+
+```{r, statistics}
+# Test every sample versus control
+data_diff <- test_diff(data_imp, type = "control", control = "Ctrl")
+
+# Test all possible comparisons of samples
+data_diff_all_contrasts <- test_diff(data_imp, type = "all")
+
+# Test manually defined comparisons
+data_diff_manual <- test_diff(data_imp, type = "manual", 
+                              test = c("Ubi4_vs_Ctrl", "Ubi6_vs_Ctrl"))
+```
+
+Denote significant proteins based on user defined cutoffs
+
+```{r, add_reject}
+dep <- add_rejections(data_diff, alpha = 0.05, lfc = log2(1.5))
+```
+
+## Visualization of the results
+
+### PCA
+
+Plot the first and second principal components
+
+```{r, pca, fig.height = 3, fig.width = 4}
+plot_pca(dep, x = 1, y = 2, n = 500, point_size = 4)
+```
+
+### Correlation matrix
+
+Plot the Pearson correlation matrix
+
+```{r, corr, fig.height = 3, fig.width = 5}
+plot_cor(dep, significant = TRUE, lower = 0, upper = 1, pal = "Reds")
+```
+
+### Heatmap
+
+Plot a heatmap of all significant proteins with the data centered per protein
+
+```{r, heatmap, fig.height = 5, fig.width = 3}
+plot_heatmap(dep, type = "centered", kmeans = TRUE, 
+             k = 6, col_limit = 4, show_row_names = FALSE,
+             indicate = c("condition", "replicate"))
+```
+
+Plot a heatmap of all significant proteins (rows) and the tested contrasts (columns)
+
+```{r, heatmap2, fig.height = 5, fig.width = 3}
+plot_heatmap(dep, type = "contrast", kmeans = TRUE, 
+             k = 6, col_limit = 10, show_row_names = FALSE)
+```
+
+### Volcano plot
+
+Plot a volcano plot for the contrast "Ubi6 vs Ctrl""
+
+```{r, volcano, fig.height = 5, fig.width = 5}
+plot_volcano(dep, contrast = "Ubi6_vs_Ctrl", label_size = 2, add_names = TRUE)
+```
+
+### Barplot
+
+Plot a barplot for USP15 and IKBKG
+
+```{r, bar, fig.height = 3.5, fig.width = 3.5}
+plot_single(dep, proteins = c("USP15", "IKBKG"))
+```
+
+Plot a barplot for the protein USP15 with the data centered
+
+```{r, bar2, fig.height = 3.5, fig.width = 3.5}
+plot_single(dep, proteins = "USP15", type = "centered")
+```
+
+### Frequency plots
+
+Plot a frequency plot of significant proteins for the different conditions
+
+```{r, overlap, fig.height = 4, fig.width = 6}
+plot_cond(dep)
+```
+
+## Results table
+
+Generate a results table
+
+```{r, results_table}
+data_results <- get_results(dep)
+```
+
+Number of significant proteins
+
+```{r, results_table_sign}
+
+data_results %>% filter(significant) %>% nrow()
+```
+
+Column names of the results table
+
+```{r, results_table2}
+colnames(data_results)
+```
+
+Generate a data.frame from the resulting SummarizedExperiment object
+
+```{r, get_df}
+# Generate a wide data.frame
+df_wide <- get_df_wide(dep)
+# Generate a long data.frame
+df_long <- get_df_long(dep)
+```
+
+## Save data
+
+```{r, save_load, eval = FALSE}
+save(data_se, data_norm, data_imp, data_diff, dep, file = "data.RData")
+#  # These data can be loaded in future R sessions using this command
+#  load("data.RData")
+```
+
+## Session information
+
+```{r, session_info, echo = FALSE}
+sessionInfo()
 ```
