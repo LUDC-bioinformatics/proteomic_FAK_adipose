@@ -351,7 +351,7 @@ display: none;
 <h1 class="title toc-ignore">Mass-spec proteomics: Focal adhesion kinase
 (FAK) in adipose cells</h1>
 <h4 class="author">Dmytro Kryvokhyzha</h4>
-<h4 class="date">10 January, 2024</h4>
+<h4 class="date">28 February, 2024</h4>
 
 </div>
 
@@ -372,18 +372,22 @@ cells.</p>
 <li><p>FAK DMSO INS - basal + insulin</p></li>
 <li><p>FAK PF INS - PF (FAK inhibitor) + insulin</p></li>
 </ul>
+<p>Main interest: Do the proteins interacting with FAK differ between
+the three treatments?</p>
 <p>Prior experiments indicate that cytoskeleton pathways could be
 affected.</p>
 </div>
 <div id="analysis" class="section level2">
 <h2>Analysis</h2>
-<p>Permormed with the <a href="https://bioconductor.org/packages/release/bioc/html/DEP.html">DEP</a>
+<p>Performed with the <a href="https://bioconductor.org/packages/release/bioc/html/DEP.html">DEP</a>
 package in R:</p>
 <pre class="bash"><code>R -e &#39;rmarkdown::render(&quot;code/proteomic_FAK_adipose.Rmd&quot;, output_dir=&quot;results/reports/&quot;)&#39;</code></pre>
 <p>Results:</p>
 <ul>
-<li><code>results/reports/proteomic_mass_spec.Rmd</code> - report of the
-analysis.</li>
+<li><p><code>results/reports/proteomic_FAK_adipose.html</code> - report
+of the analysis.</p></li>
+<li><p><code>results/table/proteomic_FAK_adipose_results.tsv</code> -
+results table.</p></li>
 </ul>
 </div>
 
