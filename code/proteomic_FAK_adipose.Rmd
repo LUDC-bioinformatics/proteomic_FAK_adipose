@@ -1,5 +1,5 @@
 ---
-title: " Mass-spec proteomics analysis: Focal adhesion kinase (FAK) in adipose cells"
+title: " Mass-spec proteomics analysis: Focal adhesion kinase (FAK) in adipose cells (no IP1)"
 author:
   name: "Dmytro Kryvokhyzha"
 email: dmytro.kryvokhyzha@med.lu.se
@@ -33,15 +33,6 @@ Load the data from the Excel file:
 data <- read_excel("data/Karin_Stenkula_IP_202312_LH_filtered.xlsx")
 ```
 
-```{r, eval=F, echo=F}
-# TEST
-
-# The test data is provided with the package
-data <- UbiLength
-# We filter for contaminant proteins and decoy database hits, which are indicated by "+" in the columns "Potential.contaminants" and "Reverse", respectively. 
-data <- filter(data, Reverse != "+", Potential.contaminant != "+")
-```
-
 ### Process
 
 Check the structure of the data:
@@ -56,13 +47,23 @@ Are there any duplicated accession names?
 data$v %>% duplicated() %>% any()
 ```
 
+## Remove IP1 
+
+I remove the sample `IP1` because it is an outlier in a PCA plot
+of the previous analysis with all samples. See `results/reports/proteomic_FAK_adipose.html`.
+
+```{r}
+data_no_IP1 <- data[,-grep('IP1,', colnames(data))]
+data <- data_no_IP1
+```
+
 ## Experimental design
 
 Create an experimental design table:
 
 ```{r}
-colnames(data)[c(11:22)] <- gsub(' ', '_', gsub(', ', '_', colnames(data)[c(11:22)]))
-labels <- colnames(data)[c(11:22)]
+colnames(data)[c(11:21)] <- gsub(' ', '_', gsub(', ', '_', colnames(data)[c(11:21)]))
+labels <- colnames(data)[c(11:21)]
 
 expDesign <- data.frame(label = labels,
                         condition = sub("^[^_]+_", "", labels),
@@ -79,7 +80,7 @@ colnames(data)[2] <- 'ID'
 data$name <- sub("^.*\\|([^|]+)_.*$", "\\1", data$`FASTA Title Lines`)
 
 # Generate a SummarizedExperiment object
-data_se <- make_se(data, c(11:22), expDesign)
+data_se <- make_se(data, c(11:21), expDesign)
 data_se
 ```
 
@@ -96,7 +97,6 @@ Filter for proteins that are identified in all replicates of at least one condit
 ```{r}
 data_filt <- filter_missval(data_se, thr = 0)
 # Less stringent filtering:
-# Filter for proteins that are identified in 2 out of 3 replicates of at least one condition
 # data_filt2 <- filter_missval(data_se, thr = 1)
 ```
 
@@ -169,7 +169,7 @@ plot_imputation(data_norm, data_imp)
 
 ## Differential enrichment analysis
 
-Based on linear models and empherical Bayes statistics
+Based on linear models and empirical Bayes statistics
 
 ```{r, statistics}
 data_diff <- test_diff(data_imp, type = "all")
@@ -178,7 +178,7 @@ data_diff <- test_diff(data_imp, type = "all")
 Denote significant proteins based on user defined cutoffs
 
 ```{r, add_reject}
-dep <- add_rejections(data_diff, alpha = 0.05, lfc = log2(1.5))
+dep <- add_rejections(data_diff, alpha = 0.05, lfc = 0.5)
 ```
 
 ## Visualization of the results
@@ -234,7 +234,7 @@ Plot a barplot for top 4 proteins from each comparison:
 
 ```{r, bar, fig.height = 8, fig.width = 5}
 plot_single(dep,
-            proteins = c('CAH4', 'KT33A', 'ACAD9', 'ARPC4', 'DCMC', 'ARPC2'),
+            proteins = c('CAH4', 'GNAI2', 'ACAD9', 'ARPC4', 'DCMC', 'ARPC2'),
             type = "contrast")
 ```
 
@@ -242,7 +242,7 @@ Plot a barplot for the same protein with the centered log2-intensity data:
 
 ```{r, bar2, fig.height = 8, fig.width = 5}
 plot_single(dep,
-            proteins = c('CAH4', 'KT33A', 'ACAD9', 'ARPC4', 'DCMC', 'CAZA2'),
+            proteins = c('CAH4', 'GNAI2', 'ACAD9', 'ARPC4', 'DCMC', 'ARPC2'),
             type = "centered")
 ```
 
@@ -253,7 +253,6 @@ Plot a frequency plot of significant proteins for the different contrasts:
 ```{r, overlap, fig.height = 5, fig.width = 8}
 plot_cond(dep)
 ```
-
 Print the overlap frequency table:
 
 ```{r, overlap+_print}
@@ -287,7 +286,7 @@ df_res <- get_df_wide(dep)
 Save R objects:
 
 ```{r, save_load, eval = FALSE}
-save(data_diff, data_imp, data_norm, data_se, dep, file = 'intermediate/proteomic_FAK_adipose.RData')
+save(data_diff, data_imp, data_norm, data_se, dep, file = 'intermediate/proteomic_FAK_adipose_noIP1.RData')
 # load('intermediate/proteomic_FAK_adipose.RData')
 ```
 
@@ -295,7 +294,7 @@ Write results to a table:
 
 ```{r}
 write.table(df_res,
-            file = 'results/table/proteomic_FAK_adipose_results.tsv',
+            file = 'results/table/proteomic_FAK_adipose_results_noIP1.tsv',
             quote = T,
             row.names = F,
             sep = '\t')

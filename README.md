@@ -49,4 +49,8 @@ Results:
 
   - `results/reports/proteomic_FAK_adipose.html` - report of the analysis.
   
+  - `results/reports/proteomic_FAK_adipose_noIP1.html` - report of the analysis without IP1.
+  
   - `results/table/proteomic_FAK_adipose_results.tsv` - results table.
+  
+  - `results/table/proteomic_FAK_adipose_results_noIP1.tsv` - results table without IP1.
