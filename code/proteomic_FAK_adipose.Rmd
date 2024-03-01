@@ -77,7 +77,7 @@ Generate a SummarizedExperiment object:
 ```{r}
 # create the ID and gene name columns:
 colnames(data)[2] <- 'ID'
-data$name <- sub("^.*\\|([^|]+)_.*$", "\\1", data$`FASTA Title Lines`)
+data$name <- sub(".*GN=([^ ]+).*", "\\1", data$Description)
 
 # Generate a SummarizedExperiment object
 data_se <- make_se(data, c(11:21), expDesign)
@@ -234,7 +234,7 @@ Plot a barplot for top 4 proteins from each comparison:
 
 ```{r, bar, fig.height = 8, fig.width = 5}
 plot_single(dep,
-            proteins = c('CAH4', 'GNAI2', 'ACAD9', 'ARPC4', 'DCMC', 'ARPC2'),
+            proteins = c('Ca4', 'Gnai2', 'Acad9', 'Arpc4', 'Mlycd', 'Arpc2'),
             type = "contrast")
 ```
 
@@ -242,7 +242,7 @@ Plot a barplot for the same protein with the centered log2-intensity data:
 
 ```{r, bar2, fig.height = 8, fig.width = 5}
 plot_single(dep,
-            proteins = c('CAH4', 'GNAI2', 'ACAD9', 'ARPC4', 'DCMC', 'ARPC2'),
+            proteins = c('Ca4', 'Gnai2', 'Acad9', 'Arpc4', 'Mlycd', 'Arpc2'),
             type = "centered")
 ```
 
