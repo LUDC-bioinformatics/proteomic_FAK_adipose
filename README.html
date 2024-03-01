@@ -351,7 +351,7 @@ display: none;
 <h1 class="title toc-ignore">Mass-spec proteomics: Focal adhesion kinase
 (FAK) in adipose cells</h1>
 <h4 class="author">Dmytro Kryvokhyzha</h4>
-<h4 class="date">28 February, 2024</h4>
+<h4 class="date">01 March, 2024</h4>
 
 </div>
 
@@ -379,6 +379,8 @@ affected.</p>
 </div>
 <div id="analysis" class="section level2">
 <h2>Analysis</h2>
+<div id="differential-enrichment-analysis" class="section level3">
+<h3>Differential enrichment analysis</h3>
 <p>Performed with the <a href="https://bioconductor.org/packages/release/bioc/html/DEP.html">DEP</a>
 package in R:</p>
 <pre class="bash"><code>R -e &#39;rmarkdown::render(&quot;code/proteomic_FAK_adipose.Rmd&quot;, output_dir=&quot;results/reports/&quot;)&#39;</code></pre>
@@ -393,6 +395,23 @@ results table.</p></li>
 <li><p><code>results/table/proteomic_FAK_adipose_results_noIP1.tsv</code>
 - results table without IP1.</p></li>
 </ul>
+</div>
+<div id="functional-analysis" class="section level3">
+<h3>Functional analysis</h3>
+<p>The list of DE proteins can be explored in the <a href="https://string-db.org">STRING database</a>.</p>
+<p>Make sure to use a custom background in the analysis tab. To that
+end, create an account, go to MyData, upload the full list of proteins
+(712) and select “enable usage as a statistical background set”. Then
+select this list in the analysis tab when you analyse your specific set
+of proteins.</p>
+<p>The background is used to correct for the fact that we analysed only
+subset of proteins and some functions could not be included in the
+analysis or ration between the functions is different in our subset
+versus the whole genome.</p>
+<p>The number of background proteins is 666 and thus less than 711
+original ones, because I filter for proteins that are identified in all
+replicates of at least one condition.</p>
+</div>
 </div>
 
 
