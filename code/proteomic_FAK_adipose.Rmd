@@ -21,6 +21,10 @@ knitr::opts_knit$set(root.dir = '~/Projects/Karin_Stenkula/proteomic_FAK_adipose
 library(readxl)
 library(DEP)
 library(dplyr)
+library(SummarizedExperiment)
+library(ggplot2)
+library(ggrepel)
+library(assertthat)
 ```
 
 ## Data
@@ -69,6 +73,9 @@ expDesign <- data.frame(label = labels,
                         condition = sub("^[^_]+_", "", labels),
                         replicate = sub("_.+", "", labels)
                         )
+# Reverse the order
+expDesign <- expDesign %>% arrange(desc(row_number()))
+
 knitr::kable(expDesign)
 ```
 
@@ -223,9 +230,9 @@ plot_heatmap(dep, type = "contrast", kmeans = TRUE,
 Plot a volcano plot for the contrast FAK contrasts:
 
 ```{r, volcano, fig.height = 5, fig.width = 5}
-plot_volcano(dep, contrast = "FAK_DMSO_basal_vs_FAK_DMSO_INS")
-plot_volcano(dep, contrast = "FAK_DMSO_basal_vs_FAK_PF_INS")
-plot_volcano(dep, contrast = "FAK_DMSO_INS_vs_FAK_PF_INS")
+plot_volcano(dep, contrast = "FAK_DMSO_INS_vs_FAK_DMSO_basal")
+plot_volcano(dep, contrast = "FAK_PF_INS_vs_FAK_DMSO_basal")
+plot_volcano(dep, contrast = "FAK_PF_INS_vs_FAK_DMSO_INS")
 ```
 
 ### Barplot
@@ -292,7 +299,7 @@ save(data_diff, data_imp, data_norm, data_se, dep, file = 'intermediate/proteomi
 
 Write results to a table:
 
-```{r}
+```{r, eval = FALSE}
 write.table(df_res,
             file = 'results/table/proteomic_FAK_adipose_results_noIP1.tsv',
             quote = T,
@@ -300,6 +307,145 @@ write.table(df_res,
             sep = '\t')
 ```
 
+## Plots for manuscript
+
+Function to make a publication plot:
+
+```{r}
+plot_volcano_publication <- function(dep, contrast, label_size = 3, add_names = TRUE, adjusted = FALSE, 
+                         plot = TRUE, down_side, up_side, lable_genes) {
+    if (is.integer(label_size)) 
+        label_size <- as.numeric(label_size)
+    assertthat::assert_that(inherits(dep, "SummarizedExperiment"), 
+                            is.character(contrast), length(contrast) == 1, is.numeric(label_size), 
+                            length(label_size) == 1, is.logical(add_names), length(add_names) == 
+                                1, is.logical(adjusted), length(adjusted) == 1, is.logical(plot), 
+                            length(plot) == 1)
+    row_data <- SummarizedExperiment::rowData(dep, use.names = FALSE)
+    if (any(!c("name", "ID") %in% colnames(row_data))) {
+        stop(paste0("'name' and/or 'ID' columns are not present in '", 
+                    deparse(substitute(dep)), "'.\nRun make_unique() to obtain required columns."), 
+             call. = FALSE)
+    }
+    if (length(grep("_p.adj|_diff", colnames(row_data))) < 1) {
+        stop(paste0("'[contrast]_diff' and '[contrast]_p.adj' columns are not present in '", 
+                    deparse(substitute(dep)), "'.\nRun test_diff() to obtain the required columns."), 
+             call. = FALSE)
+    }
+    if (length(grep("_significant", colnames(row_data))) < 1) {
+        stop(paste0("'[contrast]_significant' columns are not present in '", 
+                    deparse(substitute(dep)), "'.\nRun add_rejections() to obtain the required columns."), 
+             call. = FALSE)
+    }
+    if (length(grep(paste(contrast, "_diff", sep = ""), colnames(row_data))) == 
+        0) {
+        valid_cntrsts <- row_data %>% data.frame() %>% select(ends_with("_diff")) %>% 
+            colnames(.) %>% gsub("_diff", "", .)
+        valid_cntrsts_msg <- paste0("Valid contrasts are: '", 
+                                    paste0(valid_cntrsts, collapse = "', '"), "'")
+        stop("Not a valid contrast, please run `plot_volcano()` with a valid contrast as argument\n", 
+             valid_cntrsts_msg, call. = FALSE)
+    }
+    diff <- grep(paste(contrast, "_diff", sep = ""), colnames(row_data))
+    if (adjusted) {
+        p_values <- grep(paste(contrast, "_p.adj", sep = ""), 
+                         colnames(row_data))
+    }
+    else {
+        p_values <- grep(paste(contrast, "_p.val", sep = ""), 
+                         colnames(row_data))
+    }
+    signif <- grep(paste(contrast, "_significant", sep = ""), 
+                   colnames(row_data))
+    df <- data.frame(x = row_data[, diff], y = -log10(row_data[, 
+                                                               p_values]), significant = row_data[, signif], name = row_data$name) %>% 
+        filter(!is.na(significant)) %>% arrange(significant)
+    name1 <- gsub("_vs_.*", "", contrast)
+    name2 <- gsub(".*_vs_", "", contrast)
+    p <- ggplot(df, aes(x, y)) + 
+        geom_point(aes(col = significant), size = 2.5, alpha = 0.7) + 
+        geom_text(data = data.frame(), 
+                  aes(x = c(Inf, -Inf), y = c(-Inf, -Inf), hjust = c(1.1, -0.1), vjust = c(-1, -1), label = c(up_side, down_side), size = 5, 
+                      fontface = "italic")) + 
+        labs(x = expression(bold(log[2] ~ "Fold change")), y = if (adjusted) expression(bold(-log[10] ~ "Adjusted p-value")) else expression(bold(-log[10] ~ "P-value"))) + 
+        theme_minimal() + 
+        theme(legend.position = "none",
+              panel.grid = element_blank(),  # Remove grid lines
+              axis.text = element_text(size = 12, color = "black", face = "bold"),  # Bold axis text
+              axis.title = element_text(size = 14, color = "black", face = "bold"),  # Bold axis titles
+              plot.title = element_text(size = 16, face = "bold", hjust = 0.5, color = "black"),
+              plot.caption = element_text(size = 10, color = "black"),
+              axis.line = element_line(size = 0.5),  # Adjust axis line thickness
+              axis.line.x = element_line(color = "black", size = 0.5),  # X-axis line settings
+              axis.line.y = element_line(color = "black", size = 0.5),  # Y-axis line settings
+              axis.line.top = element_blank(),  # Remove top axis line
+              axis.line.right = element_blank(), # Remove right axis line
+              axis.ticks = element_line(color = "black")) +  # Add axis ticks
+      scale_color_manual(values = c(`TRUE` = "black", `FALSE` = "grey"))
+    if (add_names) {
+        p <- p + ggrepel::geom_text_repel(data = filter(df, name %in% lable_genes), 
+                                          aes(label = name), size = label_size, box.padding = unit(0.1, 
+                                                                                                   "lines"), point.padding = unit(0.1, "lines"), 
+                                          segment.size = 0.5,
+                                          nudge_y = 0.05,  # Adjust this value to move labels up
+                                          force = 1,  # Adjust force to control repulsion
+                                          vjust = -0.5,  # Vertical justification to center labels on dots
+                                          color = "black")  # Ensure labels are black
+    }
+    if (plot) {
+        return(p)
+    }
+    else {
+        df <- df %>% select(name, x, y, significant) %>% arrange(desc(x))
+        colnames(df)[c(1, 2, 3)] <- c("protein", "log2_fold_change", 
+                                      "p_value_-log10")
+        if (adjusted) {
+            colnames(df)[3] <- "adjusted_p_value_-log10"
+        }
+        return(df)
+    }
+}
+```
+
+Genes to label in plots:
+
+```{r}
+genes_to_remove <- c("Gnb1", "Calm2", "Gnai1", "Ca4", "Prxl2a", "Mlycd")
+
+FAK_PF_INS_vs_FAK_DMSO_INS_sign_names <- data_results %>% filter(FAK_PF_INS_vs_FAK_DMSO_INS_significant) %>% pull(name)
+FAK_PF_INS_vs_FAK_DMSO_INS_sign_names <- FAK_PF_INS_vs_FAK_DMSO_INS_sign_names[!FAK_PF_INS_vs_FAK_DMSO_INS_sign_names %in% genes_to_remove]
+FAK_PF_INS_vs_FAK_DMSO_INS_sign_names
+```
+
+FAK_PF_INS vs FAK_DMSO_INS:
+
+```{r, fig3B, fig.height = 5, fig.width = 5}
+# Example usage
+fig3B <- plot_volcano_publication(dep, contrast = "FAK_DMSO_INS_vs_FAK_DMSO_basal",
+                                  down_side = "DMSO",
+                                  up_side = "DMSO + insulin",
+                                  lable_genes = c('Ca4', 'Gnai1', 'Gnai2', 'Gnb1', 'Rpl36', 'Purb'))
+fig3B
+
+# pdf('results/figures/fig3B_FAK_DMSO_INS_vs_FAK_DMSO_basal.pdf',  height = 5, width = 5)
+#   print(fig3B)
+# dev.off()
+```
+
+FAK_PF_INS vs FAK_DMSO_INS:
+
+```{r, fig3C, fig.height = 5, fig.width = 5}
+# Example usage
+fig3C <- plot_volcano_publication(dep, contrast = "FAK_PF_INS_vs_FAK_DMSO_INS",
+                                  down_side = "DMSO + insulin",
+                                  up_side = "PF + insulin",
+                                  lable_genes = FAK_PF_INS_vs_FAK_DMSO_INS_sign_names)
+fig3C
+
+# pdf('results/figures/fig3C_FAK_PF_INS_vs_FAK_DMSO_INS.pdf',  height = 5, width = 5)
+#   print(fig3C)
+# dev.off()
+```
 
 ## Session information
 
