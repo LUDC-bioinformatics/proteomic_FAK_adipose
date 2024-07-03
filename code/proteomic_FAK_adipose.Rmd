@@ -292,14 +292,14 @@ df_res <- get_df_wide(dep)
 
 Save R objects:
 
-```{r, save_load, eval = FALSE}
+```{r, save_load, eval = T}
 save(data_diff, data_imp, data_norm, data_se, dep, file = 'intermediate/proteomic_FAK_adipose_noIP1.RData')
 # load('intermediate/proteomic_FAK_adipose.RData')
 ```
 
 Write results to a table:
 
-```{r, eval = FALSE}
+```{r, eval = T}
 write.table(df_res,
             file = 'results/table/proteomic_FAK_adipose_results_noIP1.tsv',
             quote = T,
@@ -383,9 +383,10 @@ plot_volcano_publication <- function(dep, contrast, label_size = 3, add_names = 
               axis.ticks = element_line(color = "black")) +  # Add axis ticks
       scale_color_manual(values = c(`TRUE` = "black", `FALSE` = "grey"))
     if (add_names) {
-        p <- p + ggrepel::geom_text_repel(data = filter(df, name %in% lable_genes), 
-                                          aes(label = name), size = label_size, box.padding = unit(0.1, 
-                                                                                                   "lines"), point.padding = unit(0.1, "lines"), 
+        p <- p + ggrepel::geom_text_repel(data = filter(df, significant),
+          # p + ggrepel::geom_text_repel(data = filter(df, name %in% lable_genes),
+                                          aes(label = name), size = label_size, box.padding = unit(0.1,
+                                                                                                   "lines"), point.padding = unit(0.1, "lines"),
                                           segment.size = 0.5,
                                           nudge_y = 0.05,  # Adjust this value to move labels up
                                           force = 1,  # Adjust force to control repulsion
@@ -423,8 +424,7 @@ FAK_PF_INS vs FAK_DMSO_INS:
 # Example usage
 fig3B <- plot_volcano_publication(dep, contrast = "FAK_DMSO_INS_vs_FAK_DMSO_basal",
                                   down_side = "DMSO",
-                                  up_side = "DMSO + insulin",
-                                  lable_genes = c('Ca4', 'Gnai1', 'Gnai2', 'Gnb1', 'Rpl36', 'Purb'))
+                                  up_side = "DMSO + insulin")
 fig3B
 
 # pdf('results/figures/fig3B_FAK_DMSO_INS_vs_FAK_DMSO_basal.pdf',  height = 5, width = 5)
@@ -438,13 +438,14 @@ FAK_PF_INS vs FAK_DMSO_INS:
 # Example usage
 fig3C <- plot_volcano_publication(dep, contrast = "FAK_PF_INS_vs_FAK_DMSO_INS",
                                   down_side = "DMSO + insulin",
-                                  up_side = "PF + insulin",
-                                  lable_genes = FAK_PF_INS_vs_FAK_DMSO_INS_sign_names)
+                                  up_side = "PF + insulin"
+                                  #lable_genes = FAK_PF_INS_vs_FAK_DMSO_INS_sign_names
+                                  )
 fig3C
 
-# pdf('results/figures/fig3C_FAK_PF_INS_vs_FAK_DMSO_INS.pdf',  height = 5, width = 5)
-#   print(fig3C)
-# dev.off()
+pdf('results/figures/fig3C_FAK_PF_INS_vs_FAK_DMSO_INS.pdf',  height = 5, width = 5)
+  print(fig3C)
+dev.off()
 ```
 
 ## Session information

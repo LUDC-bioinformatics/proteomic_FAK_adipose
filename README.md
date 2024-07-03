@@ -4,7 +4,7 @@ author:
   name: "Dmytro Kryvokhyzha"
 email: dmytro.kryvokhyzha@med.lu.se
 affiliation: LUDC Bioinformatics Unit
-date: "01 March, 2024"
+date: "03 July, 2024"
 output:
   html_document:
     keep_md: true
@@ -43,9 +43,12 @@ Prior experiments indicate that cytoskeleton pathways could be affected.
 Performed with the [DEP](https://bioconductor.org/packages/release/bioc/html/DEP.html) package in R:
 
 
-```bash
+``` bash
 R -e 'rmarkdown::render("code/proteomic_FAK_adipose.Rmd", output_dir="results/reports/")'
 ```
+
+I removed the sample IP1 because it looked like an outlier. However, the results
+for all samples are also provided.
 
 Results:
 
@@ -59,11 +62,11 @@ Results:
 
 ### Functional analysis
 
-The list of DE proteins can be explored in the [STRING database](https://string-db.org).
+The list of significant proteins was visualized and tested for functional enrichment using [STRING](https://string-db.org).
 
-Make sure to use a custom background in the analysis tab. To that end, create an account, 
-go to MyData, upload the full list of proteins (712) and select “enable usage as a statistical background set".
-Then select this list in the analysis tab when you analyse your specific set of proteins.
+I used the custom background in the enrichment analysis: *create an account, 
+go to MyData -> upload the full list of proteins -> select “enable usage as a statistical background set"
+-> select this list in the analysis tab when analyzing a specific set of proteins*
 
 The background is used to correct for the fact that we analysed only subset of proteins 
 and some functions could not be included in the analysis or ration between the functions 
@@ -71,3 +74,11 @@ is different in our subset versus the whole genome.
 
 The number of background proteins is 666 and thus less than 711 original ones,
 because I filter for proteins that are identified in all replicates of at least one condition.
+
+Results:
+
+  - `results/tables/FAK_PF_INS_vs_FAK_DMSO_INS.GO_enrichment.xlsx` - GO enrichment results with BP, MF, and CC tabs.
+
+  - `results/figures/FAK_PF_INS_vs_FAK_DMSO_INS_network.svg` - figure of the full STRING network for significant proteins in the FAK_PF_INS vs FAK_DMSO_INS contrast. The edges indicate both functional and physical protein associations and line thickness indicates the strength of data support.
+
+  - `results/figures/FAK_PF_INS_vs_FAK_DMSO_INS_network_cytoskeleton.svg` - the same figure as above but with highlight in blue of the proteins representing the enriched cytoskeleton GO cellular component term (GO:0005856).
