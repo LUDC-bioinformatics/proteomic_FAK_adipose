@@ -299,7 +299,7 @@ save(data_diff, data_imp, data_norm, data_se, dep, file = 'intermediate/proteomi
 
 Write results to a table:
 
-```{r, eval = T}
+```{r, eval = F}
 write.table(df_res,
             file = 'results/table/proteomic_FAK_adipose_results_noIP1.tsv',
             quote = T,
@@ -367,10 +367,11 @@ plot_volcano_publication <- function(dep, contrast, label_size = 3, add_names = 
         geom_text(data = data.frame(), 
                   aes(x = c(Inf, -Inf), y = c(-Inf, -Inf), hjust = c(1.1, -0.1), vjust = c(-1, -1), label = c(up_side, down_side), size = 5, 
                       fontface = "italic")) + 
-        labs(x = expression(bold(log[2] ~ "Fold change")), y = if (adjusted) expression(bold(-log[10] ~ "Adjusted p-value")) else expression(bold(-log[10] ~ "P-value"))) + 
+        labs(x = expression(bold(log[2] ~ "Fold change")), y = if (adjusted) expression(bold(-log[10] ~ "Adjusted p-value")) else expression(bold(-log[10] ~ "P-value"))) +
+        geom_vline(xintercept = 0, col='darkgrey') +
         theme_minimal() + 
         theme(legend.position = "none",
-              panel.grid = element_blank(),  # Remove grid lines
+              #panel.grid = element_blank(),  # Remove grid lines
               axis.text = element_text(size = 12, color = "black", face = "bold"),  # Bold axis text
               axis.title = element_text(size = 14, color = "black", face = "bold"),  # Bold axis titles
               plot.title = element_text(size = 16, face = "bold", hjust = 0.5, color = "black"),
@@ -408,16 +409,6 @@ plot_volcano_publication <- function(dep, contrast, label_size = 3, add_names = 
 }
 ```
 
-Genes to label in plots:
-
-```{r}
-genes_to_remove <- c("Gnb1", "Calm2", "Gnai1", "Ca4", "Prxl2a", "Mlycd")
-
-FAK_PF_INS_vs_FAK_DMSO_INS_sign_names <- data_results %>% filter(FAK_PF_INS_vs_FAK_DMSO_INS_significant) %>% pull(name)
-FAK_PF_INS_vs_FAK_DMSO_INS_sign_names <- FAK_PF_INS_vs_FAK_DMSO_INS_sign_names[!FAK_PF_INS_vs_FAK_DMSO_INS_sign_names %in% genes_to_remove]
-FAK_PF_INS_vs_FAK_DMSO_INS_sign_names
-```
-
 FAK_PF_INS vs FAK_DMSO_INS:
 
 ```{r, fig3B, fig.height = 5, fig.width = 5}
@@ -427,9 +418,9 @@ fig3B <- plot_volcano_publication(dep, contrast = "FAK_DMSO_INS_vs_FAK_DMSO_basa
                                   up_side = "DMSO + insulin")
 fig3B
 
-# pdf('results/figures/fig3B_FAK_DMSO_INS_vs_FAK_DMSO_basal.pdf',  height = 5, width = 5)
-#   print(fig3B)
-# dev.off()
+pdf('results/figures/fig3B_FAK_DMSO_INS_vs_FAK_DMSO_basal_guide_lines.pdf',  height = 5, width = 5)
+  print(fig3B)
+dev.off()
 ```
 
 FAK_PF_INS vs FAK_DMSO_INS:
@@ -443,7 +434,7 @@ fig3C <- plot_volcano_publication(dep, contrast = "FAK_PF_INS_vs_FAK_DMSO_INS",
                                   )
 fig3C
 
-pdf('results/figures/fig3C_FAK_PF_INS_vs_FAK_DMSO_INS.pdf',  height = 5, width = 5)
+pdf('results/figures/fig3C_FAK_PF_INS_vs_FAK_DMSO_INS_guide_lines.pdf',  height = 5, width = 5)
   print(fig3C)
 dev.off()
 ```
