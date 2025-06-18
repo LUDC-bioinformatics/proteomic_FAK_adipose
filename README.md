@@ -10,9 +10,9 @@ output:
     keep_md: true
 ---
   
-## Paper
+## Publication
 
-[Kopietz et al. **Focal Adhesion Kinase Orchestrates GLUT4 Translocation and Glucose Uptake via Cytoskeletal Turnover in Primary Adipocytes**, FASEB](https://doi.org/10.1096/fj.202402764RR)
+[Kopietz et al. **Focal Adhesion Kinase Orchestrates GLUT4 Translocation and Glucose Uptake via Cytoskeletal Turnover in Primary Adipocytes**, _FASEB_](https://doi.org/10.1096/fj.202402764RR)
 
 ## PI
 
